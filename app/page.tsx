@@ -2,6 +2,9 @@
 
 import { WorkflowEditor } from '@/components/workflow-editor';
 import { AIChat } from '@/components/ai-chat';
+import { ExecutionInputDialog } from '@/components/execution-input-dialog';
+import { ExecutionResultsViewer } from '@/components/execution-results-viewer';
+import { ExecutionHistory } from '@/components/execution-history';
 import { useEffect, useState } from 'react';
 import { WorkflowBlock, WorkflowConnection } from '@/lib/types';
 import { Button } from '@/components/ui/button';
@@ -17,7 +20,8 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { MoreVertical, Trash2 } from 'lucide-react';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { MoreVertical, Trash2, History } from 'lucide-react';
 
 export default function Home() {
   const [workflowId, setWorkflowId] = useState<string | null>(null);
@@ -28,6 +32,10 @@ export default function Home() {
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [executionInputDialogOpen, setExecutionInputDialogOpen] = useState(false);
+  const [executionResultsDialogOpen, setExecutionResultsDialogOpen] = useState(false);
+  const [currentRunId, setCurrentRunId] = useState<string | null>(null);
+  const [executingWorkflowId, setExecutingWorkflowId] = useState<string | null>(null);
 
   const handleCreateWorkflow = async () => {
     if (!workflowName.trim()) {
@@ -103,14 +111,17 @@ export default function Home() {
     }
   };
 
-  const handleExecuteWorkflow = async (id: string) => {
+  const handleExecuteWorkflow = async (id: string, input: string) => {
+    setExecutingWorkflowId(id);
     setIsLoading(true);
+    setExecutionInputDialogOpen(false);
+
     try {
       const response = await fetch(`/api/workflows/${id}/execute`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          input: 'Hello, this is a test input for the workflow.',
+          input: input || 'Hello, this is a test input for the workflow.',
         }),
       });
 
@@ -129,14 +140,31 @@ export default function Home() {
       }
 
       const result = await response.json();
-      toast.success(`Workflow executed successfully! Run ID: ${result.runId}`);
-      console.log('Execution results:', result);
+      setCurrentRunId(result.runId);
+      setExecutionResultsDialogOpen(true);
+      toast.success('Workflow execution started!');
     } catch (error: any) {
       toast.error(error.message || 'Failed to execute workflow');
       console.error(error);
     } finally {
       setIsLoading(false);
+      setExecutingWorkflowId(null);
     }
+  };
+
+  const handleExecuteClick = (id: string) => {
+    setExecutingWorkflowId(id);
+    setExecutionInputDialogOpen(true);
+  };
+
+  const handleViewRun = (runId: string) => {
+    setCurrentRunId(runId);
+    setExecutionResultsDialogOpen(true);
+  };
+
+  const handleRunComplete = () => {
+    // Refresh execution history if needed
+    setExecutingWorkflowId(null);
   };
 
   const handleDeleteWorkflow = async () => {
@@ -279,14 +307,31 @@ export default function Home() {
               initialBlocks={blocks}
               initialConnections={connections}
               onSave={handleSaveWorkflow}
-              onExecute={handleExecuteWorkflow}
+              onExecute={handleExecuteClick}
             />
           </div>
           <div className="w-96 border-l border-gray-200 h-full flex flex-col overflow-hidden">
-            <AIChat
-              workflowId={workflowId}
-              onWorkflowUpdate={handleWorkflowUpdateFromChat}
-            />
+            <Tabs defaultValue="chat" className="h-full flex flex-col">
+              <TabsList className="w-full rounded-none border-b">
+                <TabsTrigger value="chat" className="flex-1">Chat</TabsTrigger>
+                <TabsTrigger value="history" className="flex-1">
+                  <History className="h-4 w-4 mr-2" />
+                  History
+                </TabsTrigger>
+              </TabsList>
+              <TabsContent value="chat" className="flex-1 min-h-0 m-0">
+                <AIChat
+                  workflowId={workflowId}
+                  onWorkflowUpdate={handleWorkflowUpdateFromChat}
+                />
+              </TabsContent>
+              <TabsContent value="history" className="flex-1 min-h-0 m-0">
+                <ExecutionHistory
+                  workflowId={workflowId!}
+                  onViewRun={handleViewRun}
+                />
+              </TabsContent>
+            </Tabs>
           </div>
         </div>
       ) : (
@@ -299,6 +344,26 @@ export default function Home() {
         </div>
       )}
 
+      {/* Execution Input Dialog */}
+      <ExecutionInputDialog
+        open={executionInputDialogOpen}
+        onOpenChange={setExecutionInputDialogOpen}
+        onExecute={(input) => executingWorkflowId && handleExecuteWorkflow(executingWorkflowId, input)}
+        isLoading={isLoading}
+      />
+
+      {/* Execution Results Viewer */}
+      {workflowId && currentRunId && (
+        <ExecutionResultsViewer
+          open={executionResultsDialogOpen}
+          onOpenChange={setExecutionResultsDialogOpen}
+          workflowId={workflowId}
+          runId={currentRunId}
+          onRunComplete={handleRunComplete}
+        />
+      )}
+
+      <Toaster />
     </div>
   );
 }

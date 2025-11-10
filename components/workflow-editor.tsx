@@ -269,7 +269,7 @@ export function WorkflowEditor({
             Save Workflow
           </Button>
           {workflowId && onExecute && (
-            <Button onClick={() => onExecute(workflowId)}>
+            <Button onClick={() => workflowId && onExecute(workflowId)}>
               Execute
             </Button>
           )}
