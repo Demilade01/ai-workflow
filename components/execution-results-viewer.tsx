@@ -58,18 +58,27 @@ export function ExecutionResultsViewer({
   const fetchRunDetails = useCallback(async (runIdToFetch: string) => {
     try {
       const response = await fetch(`/api/workflows/${workflowId}/runs/${runIdToFetch}`);
-      if (!response.ok) throw new Error('Failed to fetch run details');
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || 'Failed to fetch run details');
+      }
 
       const data = await response.json();
+      console.log('Fetched run details:', {
+        runId: runIdToFetch,
+        runStatus: data.run?.status,
+        executionsCount: data.executions?.length
+      });
+
       setRun(data.run);
       setExecutions(data.executions || []);
 
       // If run is still running, continue polling
-      if (data.run.status === 'running') {
+      if (data.run?.status === 'running') {
         setPolling(true);
       } else {
         setPolling(false);
-        if (data.run.status === 'completed' || data.run.status === 'failed') {
+        if (data.run?.status === 'completed' || data.run?.status === 'failed') {
           onRunComplete?.();
         }
       }
@@ -149,9 +158,21 @@ export function ExecutionResultsViewer({
               <div className="flex items-center justify-center py-8">
                 <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
               </div>
-            ) : executions.length === 0 ? (
+            ) : executions.length === 0 && run ? (
               <div className="text-center py-8 text-gray-500">
-                No execution data available
+                <p className="mb-2 font-medium">No execution data available</p>
+                <p className="text-sm text-gray-400">
+                  {run.status === 'completed'
+                    ? 'The workflow completed, but no block executions were found. This may happen if the workflow has no blocks or blocks were not executed.'
+                    : run.status === 'running'
+                    ? 'Execution data will appear here as blocks are processed...'
+                    : 'Waiting for execution to start.'}
+                </p>
+                {run.status === 'completed' && (
+                  <p className="text-xs text-gray-400 mt-2">
+                    Check the browser console and server logs for debugging information.
+                  </p>
+                )}
               </div>
             ) : (
               executions.map((execution, index) => (

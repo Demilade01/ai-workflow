@@ -88,15 +88,19 @@ export default function Home() {
       });
 
       if (!response.ok) {
-        throw new Error('Failed to save workflow');
+        const errorData = await response.json().catch(() => ({}));
+        const errorMessage = errorData.error || errorData.message || 'Failed to save workflow';
+        console.error('Save workflow error:', errorMessage, errorData);
+        throw new Error(errorMessage);
       }
 
       setBlocks(updatedBlocks);
       setConnections(updatedConnections);
       toast.success('Workflow saved successfully');
-    } catch (error) {
-      toast.error('Failed to save workflow');
-      console.error(error);
+    } catch (error: any) {
+      const errorMessage = error.message || 'Failed to save workflow';
+      toast.error(errorMessage);
+      console.error('Failed to save workflow:', error);
     } finally {
       setIsLoading(false);
     }
@@ -141,7 +145,12 @@ export default function Home() {
 
       const result = await response.json();
       setCurrentRunId(result.runId);
-      setExecutionResultsDialogOpen(true);
+
+      // Small delay to ensure data is saved before opening dialog
+      setTimeout(() => {
+        setExecutionResultsDialogOpen(true);
+      }, 500);
+
       toast.success('Workflow execution started!');
     } catch (error: any) {
       toast.error(error.message || 'Failed to execute workflow');

@@ -22,6 +22,7 @@ import { Card } from '@/components/ui/card';
 import { BlockType, WorkflowBlock, WorkflowConnection } from '@/lib/types';
 import { BlockPalette } from './block-palette';
 import { BlockConfigDialog } from './block-config-dialog';
+import { v4 as uuidv4 } from 'uuid';
 
 interface WorkflowEditorProps {
   workflowId?: string;
@@ -162,7 +163,15 @@ export function WorkflowEditor({
 
   const onConnect = useCallback(
     (params: Connection) => {
-      setEdges((eds) => addEdge(params, eds));
+      // Generate UUID for the connection and create edge manually
+      const newEdge: Edge = {
+        id: uuidv4(),
+        source: params.source || '',
+        target: params.target || '',
+        sourceHandle: params.sourceHandle || null,
+        targetHandle: params.targetHandle || null,
+      };
+      setEdges((eds) => [...eds, newEdge]);
     },
     [setEdges]
   );
@@ -189,7 +198,7 @@ export function WorkflowEditor({
   const handleAddBlock = useCallback(
     (type: BlockType, position: { x: number; y: number }) => {
       const newBlock: Node = {
-        id: `block-${Date.now()}`,
+        id: uuidv4(), // Generate proper UUID
         type: 'block',
         position,
         data: {

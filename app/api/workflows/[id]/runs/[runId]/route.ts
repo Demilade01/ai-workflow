@@ -1,6 +1,6 @@
 import { db } from '@/lib/db';
 import { workflowRuns, blockExecutions, blocks } from '@/lib/schema';
-import { eq } from 'drizzle-orm';
+import { eq, asc } from 'drizzle-orm';
 import { NextRequest, NextResponse } from 'next/server';
 
 // GET /api/workflows/[id]/runs/[runId] - Get execution details for a specific run
@@ -42,7 +42,9 @@ export async function GET(
       .from(blockExecutions)
       .innerJoin(blocks, eq(blockExecutions.blockId, blocks.id))
       .where(eq(blockExecutions.workflowRunId, runId))
-      .orderBy(blockExecutions.startedAt);
+      .orderBy(asc(blockExecutions.createdAt));
+
+    console.log(`[Run Details] Found ${executions.length} executions for run ${runId}`);
 
     return NextResponse.json({
       run,
