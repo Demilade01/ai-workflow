@@ -236,7 +236,7 @@ export function WorkflowEditor({
           <Controls />
           <MiniMap />
         </ReactFlow>
-        <div className="absolute top-4 right-4 z-10 flex gap-2">
+        <div className="absolute top-4 right-20 z-10 flex gap-2">
           <Button variant="outline" onClick={handleSave}>
             Save Workflow
           </Button>
