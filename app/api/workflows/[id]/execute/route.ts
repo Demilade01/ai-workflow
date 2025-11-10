@@ -178,8 +178,34 @@ export async function POST(
 
     // Execute all blocks
     try {
-      for (const block of workflowBlocks) {
+      if (workflowBlocks.length === 0) {
+        // No blocks to execute
+        await db
+          .update(workflowRuns)
+          .set({
+            status: 'completed',
+            completedAt: new Date(),
+          })
+          .where(eq(workflowRuns.id, run.id));
+
+        return NextResponse.json({
+          runId: run.id,
+          status: 'completed',
+          results: {},
+          message: 'Workflow executed successfully, but no blocks were found to execute.',
+        });
+      }
+
+      // Execute all blocks starting from starting blocks
+      for (const block of startingBlocks.length > 0 ? startingBlocks : workflowBlocks) {
         await executeBlock(block.id);
+      }
+
+      // Execute any remaining blocks that weren't starting blocks
+      for (const block of workflowBlocks) {
+        if (!startingBlocks.includes(block)) {
+          await executeBlock(block.id);
+        }
       }
 
       // Update workflow run
