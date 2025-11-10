@@ -1,6 +1,7 @@
 'use client';
 
 import { WorkflowEditor } from '@/components/workflow-editor';
+import { AIChat } from '@/components/ai-chat';
 import { useEffect, useState } from 'react';
 import { WorkflowBlock, WorkflowConnection } from '@/lib/types';
 import { Button } from '@/components/ui/button';
@@ -10,6 +11,13 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Toaster } from '@/components/ui/sonner';
 import { toast } from 'sonner';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { MoreVertical, Trash2 } from 'lucide-react';
 
 export default function Home() {
   const [workflowId, setWorkflowId] = useState<string | null>(null);
@@ -18,6 +26,7 @@ export default function Home() {
   const [blocks, setBlocks] = useState<WorkflowBlock[]>([]);
   const [connections, setConnections] = useState<WorkflowConnection[]>([]);
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
   const handleCreateWorkflow = async () => {
@@ -85,6 +94,15 @@ export default function Home() {
     }
   };
 
+  const handleWorkflowUpdateFromChat = (updatedBlocks: WorkflowBlock[], updatedConnections: WorkflowConnection[]) => {
+    setBlocks(updatedBlocks);
+    setConnections(updatedConnections);
+    // Auto-save when AI makes changes
+    if (workflowId) {
+      handleSaveWorkflow(updatedBlocks, updatedConnections);
+    }
+  };
+
   const handleExecuteWorkflow = async (id: string) => {
     setIsLoading(true);
     try {
@@ -115,6 +133,34 @@ export default function Home() {
       console.log('Execution results:', result);
     } catch (error: any) {
       toast.error(error.message || 'Failed to execute workflow');
+      console.error(error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleDeleteWorkflow = async () => {
+    if (!workflowId) return;
+
+    setIsLoading(true);
+    try {
+      const response = await fetch(`/api/workflows/${workflowId}`, {
+        method: 'DELETE',
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to delete workflow');
+      }
+
+      toast.success('Workflow deleted successfully');
+      setWorkflowId(null);
+      setBlocks([]);
+      setConnections([]);
+      setWorkflowName('');
+      setWorkflowDescription('');
+      setDeleteDialogOpen(false);
+    } catch (error) {
+      toast.error('Failed to delete workflow');
       console.error(error);
     } finally {
       setIsLoading(false);
@@ -180,13 +226,69 @@ export default function Home() {
       </div>
 
       {workflowId ? (
-        <WorkflowEditor
-          workflowId={workflowId}
-          initialBlocks={blocks}
-          initialConnections={connections}
-          onSave={handleSaveWorkflow}
-          onExecute={handleExecuteWorkflow}
-        />
+        <div className="flex h-screen overflow-hidden">
+          <div className="flex-1 relative overflow-hidden">
+            <div className="absolute top-4 right-4 z-20 flex gap-2">
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" size="icon">
+                    <MoreVertical className="h-4 w-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem
+                    className="text-red-600 focus:text-red-600 focus:bg-red-50"
+                    onClick={() => setDeleteDialogOpen(true)}
+                  >
+                    <Trash2 className="mr-2 h-4 w-4" />
+                    Delete Workflow
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
+
+            <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Delete Workflow</DialogTitle>
+                  <DialogDescription>
+                    Are you sure you want to delete this workflow? This action cannot be undone.
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="flex justify-end gap-2 mt-4">
+                  <Button
+                    variant="outline"
+                    onClick={() => setDeleteDialogOpen(false)}
+                    disabled={isLoading}
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    variant="destructive"
+                    onClick={handleDeleteWorkflow}
+                    disabled={isLoading}
+                  >
+                    {isLoading ? 'Deleting...' : 'Delete'}
+                  </Button>
+                </div>
+              </DialogContent>
+            </Dialog>
+
+            <WorkflowEditor
+              workflowId={workflowId}
+              initialBlocks={blocks}
+              initialConnections={connections}
+              onSave={handleSaveWorkflow}
+              onExecute={handleExecuteWorkflow}
+            />
+          </div>
+          <div className="w-96 border-l border-gray-200 h-full flex flex-col overflow-hidden">
+            <AIChat
+              workflowId={workflowId}
+              onWorkflowUpdate={handleWorkflowUpdateFromChat}
+            />
+          </div>
+        </div>
       ) : (
         <div className="flex items-center justify-center h-full">
           <div className="text-center">

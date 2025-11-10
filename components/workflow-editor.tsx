@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ReactFlow,
   Node,
@@ -114,6 +114,34 @@ export function WorkflowEditor({
       })),
     [initialBlocks]
   );
+
+  // Update nodes when initialBlocks change (from AI chat)
+  useEffect(() => {
+    const newNodes = initialBlocks.map((block) => ({
+      id: block.id,
+      type: 'block',
+      position: block.position,
+      data: {
+        type: block.type,
+        label: block.label,
+        config: block.config,
+      },
+    }));
+    setNodes(newNodes);
+  }, [initialBlocks]);
+
+  // Update edges when initialConnections change (from AI chat)
+  useEffect(() => {
+    const newEdges = initialConnections.map((conn) => ({
+      id: conn.id,
+      source: conn.source,
+      target: conn.target,
+      sourceHandle: conn.sourceHandle,
+      targetHandle: conn.targetHandle,
+      animated: true,
+    }));
+    setEdges(newEdges);
+  }, [initialConnections]);
 
   // Convert workflow connections to React Flow edges
   const initialEdges: Edge[] = useMemo(
@@ -236,7 +264,7 @@ export function WorkflowEditor({
           <Controls />
           <MiniMap />
         </ReactFlow>
-        <div className="absolute top-4 right-4 z-10 flex gap-2">
+        <div className="absolute top-4 right-20 z-10 flex gap-2">
           <Button variant="outline" onClick={handleSave}>
             Save Workflow
           </Button>
