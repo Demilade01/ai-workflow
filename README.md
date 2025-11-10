@@ -9,7 +9,12 @@ A modern visual AI workflow builder built with Next.js, Vercel AI SDK, React Flo
 - 🔗 Connect blocks to create complex workflows
 - 💾 Save and load workflows from Neon database
 - ⚡ Execute workflows with Vercel AI SDK
-- 🎯 Real-time execution tracking
+- 🗨️ AI chat assistant to create/modify workflows (Lovable/Base44 style)
+- 📥 Execution input dialog before running
+- 📊 Live execution progress with polling
+- 🧾 Execution results viewer with per-block input/output
+- 🕓 Execution history with status and details
+- 🗑️ Delete workflows with confirmation dialog
 
 ## Tech Stack
 
@@ -20,6 +25,7 @@ A modern visual AI workflow builder built with Next.js, Vercel AI SDK, React Flo
 - **Neon Database** - PostgreSQL database
 - **Drizzle ORM** - Type-safe database queries
 - **TypeScript** - Type safety
+- **uuid** - Stable IDs for blocks and connections
 
 ## Setup
 
@@ -43,7 +49,7 @@ OPENAI_API_KEY=sk-your-openai-api-key-here
 
 ### 3. Database Setup
 
-The database schema is already set up in your Neon database. The migration includes:
+The database schema is already set up in Neon. The migration includes:
 - `workflows` - Workflow definitions
 - `blocks` - Workflow blocks
 - `connections` - Connections between blocks
@@ -87,8 +93,17 @@ Open [http://localhost:3000](http://localhost:3000) in your browser.
 ### Executing Workflows
 
 1. Click "Save Workflow" to save your changes
-2. Click "Execute" to run the workflow
-3. View execution results in the console and database
+2. Click "Execute" to open the input dialog
+3. Provide input text and start the run
+4. Watch progress in real time
+5. View the results in the Results viewer (per block input/output)
+6. Review past runs in the History tab
+
+### AI Chat Assistant
+
+- Use the Chat tab to ask the AI to create or modify workflows.
+- The AI can add blocks, rewire connections, and configure prompts/models.
+- Changes are reflected live in the editor and can be saved.
 
 ## Block Types
 
@@ -103,10 +118,13 @@ Open [http://localhost:3000](http://localhost:3000) in your browser.
 
 - `GET /api/workflows` - List all workflows
 - `POST /api/workflows` - Create a new workflow
-- `GET /api/workflows/[id]` - Get workflow details
-- `PUT /api/workflows/[id]` - Update workflow
+- `GET /api/workflows/[id]` - Get workflow details (with blocks and connections)
+- `PUT /api/workflows/[id]` - Update workflow, blocks, and connections
 - `DELETE /api/workflows/[id]` - Delete workflow
 - `POST /api/workflows/[id]/execute` - Execute workflow
+- `GET /api/workflows/[id]/runs` - List runs for a workflow
+- `GET /api/workflows/[id]/runs/[runId]` - Run details with block executions
+- `POST /api/chat` - AI chat assistant for workflow edits
 
 ## Database Schema
 
@@ -125,7 +143,11 @@ See `lib/schema.ts` for the complete database schema definition.
 │   ├── ui/          # ShadCN UI components
 │   ├── workflow-editor.tsx
 │   ├── block-palette.tsx
-│   └── block-config-dialog.tsx
+│   ├── block-config-dialog.tsx
+│   ├── ai-chat.tsx
+│   ├── execution-input-dialog.tsx
+│   ├── execution-results-viewer.tsx
+│   └── execution-history.tsx
 ├── lib/
 │   ├── db.ts        # Database connection
 │   ├── schema.ts    # Database schema
@@ -136,8 +158,7 @@ See `lib/schema.ts` for the complete database schema definition.
 ## Next Steps
 
 - [ ] Add image generation support
-- [ ] Add workflow execution history viewer
-- [ ] Add real-time streaming for execution
+- [ ] Real-time server-sent events for block streaming
 - [ ] Add user authentication
 - [ ] Add workflow templates
 - [ ] Add conditional logic blocks
