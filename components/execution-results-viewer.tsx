@@ -139,8 +139,8 @@ export function ExecutionResultsViewer({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl max-h-[90vh] flex flex-col">
-        <DialogHeader>
+      <DialogContent className="max-w-4xl h-[90vh] flex flex-col p-0 gap-0">
+        <DialogHeader className="px-6 pt-6 pb-4 shrink-0">
           <DialogTitle className="flex items-center gap-2">
             Execution Results
             {run && getStatusBadge(run.status)}
@@ -152,8 +152,9 @@ export function ExecutionResultsViewer({
           </DialogDescription>
         </DialogHeader>
 
-        <ScrollArea className="flex-1 min-h-0 pr-4">
-          <div className="space-y-4">
+        <div className="flex-1 min-h-0 overflow-hidden px-6 pb-6">
+          <ScrollArea className="h-full">
+            <div className="space-y-4 pr-4">
             {isLoading && executions.length === 0 ? (
               <div className="flex items-center justify-center py-8">
                 <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
@@ -226,8 +227,9 @@ export function ExecutionResultsViewer({
                 </Card>
               ))
             )}
-          </div>
-        </ScrollArea>
+            </div>
+          </ScrollArea>
+        </div>
       </DialogContent>
     </Dialog>
   );
