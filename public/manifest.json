@@ -1,0 +1,17 @@
+{
+  "name": "AI Workflow Builder",
+  "short_name": "AI Workflow",
+  "description": "Create, connect, and execute AI-powered workflows visually",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#000000",
+  "icons": [
+    {
+      "src": "/favicon.ico",
+      "sizes": "any",
+      "type": "image/x-icon"
+    }
+  ]
+}
+
