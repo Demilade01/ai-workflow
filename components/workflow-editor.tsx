@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState, useRef } from 'react';
 import {
   ReactFlow,
   Node,
@@ -15,8 +15,10 @@ import {
   NodeTypes,
   Handle,
   Position,
+  ReactFlowInstance,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
+import dagre from '@dagrejs/dagre';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { BlockType, WorkflowBlock, WorkflowConnection } from '@/lib/types';
@@ -90,6 +92,42 @@ const nodeTypes: NodeTypes = {
   block: BlockNode,
 };
 
+// Dagre layout function
+const getLayoutedElements = (nodes: Node[], edges: Edge[], direction: 'TB' | 'LR' = 'TB') => {
+  const dagreGraph = new dagre.graphlib.Graph();
+  dagreGraph.setDefaultEdgeLabel(() => ({}));
+  const isHorizontal = direction === 'LR';
+  dagreGraph.setGraph({ rankdir: direction, nodesep: 100, ranksep: 150 });
+
+  const nodeWidth = 200;
+  const nodeHeight = 100;
+
+  nodes.forEach((node) => {
+    dagreGraph.setNode(node.id, { width: nodeWidth, height: nodeHeight });
+  });
+
+  edges.forEach((edge) => {
+    dagreGraph.setEdge(edge.source, edge.target);
+  });
+
+  dagre.layout(dagreGraph);
+
+  const layoutedNodes = nodes.map((node) => {
+    const nodeWithPosition = dagreGraph.node(node.id);
+    return {
+      ...node,
+      targetPosition: isHorizontal ? Position.Left : Position.Top,
+      sourcePosition: isHorizontal ? Position.Right : Position.Bottom,
+      position: {
+        x: nodeWithPosition.x - nodeWidth / 2,
+        y: nodeWithPosition.y - nodeHeight / 2,
+      },
+    };
+  });
+
+  return { nodes: layoutedNodes, edges };
+};
+
 export function WorkflowEditor({
   workflowId,
   initialBlocks = [],
@@ -99,6 +137,7 @@ export function WorkflowEditor({
 }: WorkflowEditorProps) {
   const [selectedNode, setSelectedNode] = useState<Node | null>(null);
   const [configDialogOpen, setConfigDialogOpen] = useState(false);
+  const reactFlowInstance = useRef<ReactFlowInstance | null>(null);
 
   // Convert workflow blocks to React Flow nodes
   const initialNodes: Node[] = useMemo(
@@ -252,6 +291,19 @@ export function WorkflowEditor({
     [setNodes]
   );
 
+  const handleAutoLayout = useCallback(() => {
+    if (nodes.length === 0) return;
+
+    const { nodes: layoutedNodes, edges: layoutedEdges } = getLayoutedElements(nodes, edges);
+    setNodes(layoutedNodes);
+    setEdges(layoutedEdges);
+
+    // Fit view after layout
+    setTimeout(() => {
+      reactFlowInstance.current?.fitView({ padding: 0.2, duration: 400 });
+    }, 100);
+  }, [nodes, edges, setNodes, setEdges]);
+
   return (
     <div className="w-full h-screen flex">
       <BlockPalette onAddBlock={handleAddBlock} />
@@ -265,6 +317,9 @@ export function WorkflowEditor({
           onNodeClick={onNodeClick}
           onNodesDelete={onNodesDelete}
           onEdgesDelete={onEdgesDelete}
+          onInit={(instance) => {
+            reactFlowInstance.current = instance;
+          }}
           nodeTypes={nodeTypes}
           fitView
           className="bg-gray-50"
@@ -274,6 +329,9 @@ export function WorkflowEditor({
           <MiniMap />
         </ReactFlow>
         <div className="absolute top-4 right-20 z-10 flex gap-2">
+          <Button variant="outline" onClick={handleAutoLayout} title="Auto Layout (Dagre)">
+            Auto Layout
+          </Button>
           <Button variant="outline" onClick={handleSave}>
             Save Workflow
           </Button>
